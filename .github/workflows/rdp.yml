@@ -1,0 +1,45 @@
+name: Windows RDP
+
+on:
+  workflow_dispatch:
+
+jobs:
+  rdp:
+    runs-on: windows-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Enable RDP
+        run: |
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0 -Force
+          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 0 -Force
+          net user runneradmin P@ssw0rd123 /add
+          net localgroup administrators runneradmin /add
+
+      - name: Install ngrok
+        run: |
+          Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
+          Expand-Archive ngrok.zip -Force
+          .\ngrok\ngrok.exe config add-authtoken 3M3ZkZhjE2p6lH4bgz6YRmxpJ4n_2793VsrFtNRKoXUnZ2LKp
+
+      - name: Start RDP Tunnel
+        run: |
+          Start-Process -FilePath ".\ngrok\ngrok.exe" -ArgumentList "tcp 3389 --log=stdout" -NoNewWindow
+          Start-Sleep -Seconds 15
+          
+          $tunnels = Invoke-RestMethod http://127.0.0.1:4040/api/tunnels
+          $tcp = $tunnels.tunnels | Where-Object { $_.proto -eq "tcp" }
+          
+          Write-Host ""
+          Write-Host "=============================================="
+          Write-Host "  RDP ĐÃ SẴN SÀNG"
+          Write-Host "=============================================="
+          Write-Host "Address  : $($tcp.public_url)"
+          Write-Host "Username : dzaycrazy"
+          Write-Host "Password : dzaycrazy@gmail.com"
+          Write-Host "=============================================="
+          Write-Host ""
+          
+          # Giữ máy sống
+          Start-Sleep -Seconds 3300
