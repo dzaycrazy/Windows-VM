@@ -9,13 +9,15 @@ jobs:
     timeout-minutes: 120
 
     steps:
-      - name: Enable RDP
+      - name: Enable RDP + Set Password
         run: |
+          # Bật RDP
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0 -Force
           Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 0 -Force
-          net user runneradmin P@ssw0rd123 /add
-          net localgroup administrators runneradmin /add
+          
+          # Đổi mật khẩu user có sẵn (không tạo mới)
+          net user runneradmin P@ssw0rd123
 
       - name: Install ngrok
         run: |
@@ -42,4 +44,4 @@ jobs:
           Write-Host ""
           
           # Giữ máy sống
-          Start-Sleep -Seconds 3300
+          Start-Sleep -Seconds 7000
