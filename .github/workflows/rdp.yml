@@ -7,41 +7,25 @@ jobs:
   rdp:
     runs-on: windows-latest
     timeout-minutes: 120
-
     steps:
-      - name: Enable RDP + Set Password
+      - name: Enable RDP + Create User
+        env:
+          RDP_PASSWORD: ${{ secrets.RDP_PASSWORD }}
         run: |
-          # Bật RDP
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0 -Force
           Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 0 -Force
-          
-          # Đổi mật khẩu user có sẵn (không tạo mới)
-          net user runneradmin P@ssw0rd123
+          net user dzaycrazy $env:RDP_PASSWORD /add
+          net localgroup Administrators dzaycrazy /add
+          net localgroup "Remote Desktop Users" dzaycrazy /add
 
-      - name: Install ngrok
-        run: |
-          Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
-          Expand-Archive ngrok.zip -Force
-          .\ngrok\ngrok.exe config add-authtoken 3M3ZkZhjE2p6lH4bgz6YRmxpJ4n_2793VsrFtNRKoXUnZ2LKp
+      - name: Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          hostname: gh-rdp
 
-      - name: Start RDP Tunnel
+      - name: Keep alive
         run: |
-          Start-Process -FilePath ".\ngrok\ngrok.exe" -ArgumentList "tcp 3389 --log=stdout" -NoNewWindow
-          Start-Sleep -Seconds 15
-          
-          $tunnels = Invoke-RestMethod http://127.0.0.1:4040/api/tunnels
-          $tcp = $tunnels.tunnels | Where-Object { $_.proto -eq "tcp" }
-          
-          Write-Host ""
-          Write-Host "=============================================="
-          Write-Host "  RDP ĐÃ SẴN SÀNG"
-          Write-Host "=============================================="
-          Write-Host "Address  : $($tcp.public_url)"
-          Write-Host "Username : dzaycrazy"
-          Write-Host "Password : dzaycrazy@gmail.com"
-          Write-Host "=============================================="
-          Write-Host ""
-          
-          # Giữ máy sống
+          Write-Host "RDP: $(tailscale ip -4)  |  user: dzaycrazy"
           Start-Sleep -Seconds 7000
